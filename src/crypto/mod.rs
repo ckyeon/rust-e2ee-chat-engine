@@ -1,8 +1,8 @@
 // src/my_module/mod.rs
 
-mod salt;
-mod keypair;
 mod core;
+mod keypair;
+mod salt;
 mod shared_key;
 
 pub use salt::generate_salt;

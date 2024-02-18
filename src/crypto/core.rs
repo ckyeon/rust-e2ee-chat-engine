@@ -1,23 +1,22 @@
-use aes::cipher::{block_padding::Pkcs7, BlockDecryptMut, BlockEncryptMut, KeyIvInit};
-use hex_literal::hex;
-use cbc::{Cbc, Decryptor, Encryptor};
+use aes_gcm_siv::{
+    aead::{Aead, KeyInit, OsRng},
+    Aes256GcmSiv,
+    Nonce, // Or `Aes128GcmSiv`
+};
 
-type Aes128CbcEnc = cbc::Encryptor<aes::Aes128>;
-type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
-
-pub fn encrypt(key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
-    let mut encryptor = Aes128CbcEnc::new_from_slices(key, iv).unwrap();
-    let mut buffer = data.to_vec();
-    let padding = Pkcs7::pad(&mut buffer, 16).unwrap();
-    encryptor.encrypt(&mut buffer, padding).unwrap();
-    buffer
+// add parameter nonce
+pub fn encrypt(key: &[u8], plaintext: &[u8], nonce: &[u8]) -> Vec<u8> {
+    let key = KeyInit::from_slice(key);
+    let cipher = Aes256GcmSiv::new(key);
+    let nonce = Nonce::from_slice(nonce).unwrap(); // 96-bits; unique per message
+    let ciphertext = cipher.encrypt(nonce, plaintext).unwrap();
+    ciphertext
 }
 
-pub fn decrypt(key: &[u8], iv: &[u8], data: &[u8]) -> Vec<u8> {
-    let mut decryptor = Aes128CbcDec::new_from_slices(key, iv).unwrap();
-    let mut buffer = data.to_vec();
-    decryptor.decrypt(&mut buffer).unwrap();
-    let padding = Pkcs7::unpad(&mut buffer).unwrap();
-    buffer.truncate(buffer.len() - padding);
-    buffer
+pub fn decrypt(key: &[u8], ciphertext: &[u8], nonce: &[u8]) -> Vec<u8> {
+    let key = KeyInit::from_slice(key);
+    let cipher = Aes256GcmSiv::new(key);
+    let nonce = Nonce::from_slice(nonce).unwrap(); // 96-bits; unique per message
+    let plaintext = cipher.decrypt(nonce, ciphertext).unwrap();
+    plaintext
 }
